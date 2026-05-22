@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { genId, dateNum, isoToBR } from '@/lib/utils'
+import { genId, dateNum } from '@/lib/utils'
 import type {
   Transaction, MonthData, SalaryRule,
   AddExpensePayload, AddExtraPayload, EditPayload,

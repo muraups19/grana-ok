@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { RefreshCw, ChevronLeft, ChevronRight, LogOut, ExternalLink } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { RefreshCw, ChevronLeft, ChevronRight, LogOut } from 'lucide-react'
 import { MONTHS, initials } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
 import Modal from './modals/Modal'
