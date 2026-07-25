@@ -4,8 +4,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        display: ['Syne', 'sans-serif'],
-        body:    ['Figtree', 'sans-serif'],
+        display: ['Plus Jakarta Sans', 'sans-serif'],
+        body:    ['Plus Jakarta Sans', 'sans-serif'],
         mono:    ['JetBrains Mono', 'monospace'],
       },
       colors: {

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { RefreshCw, ChevronLeft, ChevronRight, LogOut } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, LogOut, Plus, RefreshCw } from 'lucide-react'
 import { MONTHS, initials } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
 import Modal from './modals/Modal'
@@ -12,97 +12,95 @@ interface Props {
   onChangeMonth: (delta: number) => void
   onSelectMonth: (m: number, y: number) => void
   onSync: () => void
+  onAdd: () => void
   syncing: boolean
 }
 
-export default function Header({ month, year, onChangeMonth, onSelectMonth, onSync, syncing }: Props) {
+function greeting() {
+  const h = new Date().getHours()
+  if (h < 12) return 'Bom dia'
+  if (h < 18) return 'Boa tarde'
+  return 'Boa noite'
+}
+
+export default function Header({ month, year, onSelectMonth, onSync, onAdd, syncing }: Props) {
   const { profile, signOut } = useAuth()
   const [pickerYear, setPickerYear] = useState(year)
   const [showPicker,  setShowPicker ] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
 
   const userInitials = initials(profile?.name ?? profile?.email ?? '?')
+  const firstName = (profile?.name ?? profile?.email ?? '').split(' ')[0] || 'Você'
 
   return (
     <>
       <header style={{
-        position: 'sticky', top: 0, zIndex: 50,
-        background: 'rgba(6,10,18,0.90)',
-        backdropFilter: 'blur(18px)',
-        borderBottom: '1px solid var(--border-dim)',
-        padding: '10px 14px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+        padding: '20px 18px 6px',
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10,
       }}>
-        {/* Logo */}
-        <div className="font-display" style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.4px', flexShrink: 0 }}>
-          grana<span style={{ color: 'var(--accent-green)' }}>.</span>ok
-        </div>
+        {/* Greeting */}
+        <button
+          onClick={() => setShowProfile(true)}
+          style={{ background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', padding: 0 }}
+        >
+          <div style={{ fontSize: 14, color: 'var(--text-secondary)', fontWeight: 600, marginBottom: 2 }}>
+            {greeting()}
+          </div>
+          <div className="font-display" style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.7px', color: 'var(--text-primary)', textTransform: 'capitalize' }}>
+            {firstName}
+          </div>
+        </button>
 
         {/* Right controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {/* Sync button */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 4 }}>
           <button
             onClick={onSync}
+            title="Sincronizar"
             style={{
-              display: 'flex', alignItems: 'center', gap: 5,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 34, height: 34, borderRadius: '50%',
               background: 'var(--bg-raised)', border: '1px solid var(--border-med)',
-              color: 'var(--text-secondary)', padding: '6px 10px',
-              borderRadius: 'var(--radius-sm)', fontSize: 11, fontWeight: 600,
-              cursor: 'pointer', transition: '0.18s', fontFamily: 'Figtree, sans-serif',
+              color: 'var(--text-secondary)', cursor: 'pointer', flexShrink: 0,
             }}
           >
-            <RefreshCw size={11} style={{ animation: syncing ? 'spin 1s linear infinite' : 'none' }} />
-            Sync
+            <RefreshCw size={14} style={{ animation: syncing ? 'spin 1s linear infinite' : 'none' }} />
           </button>
 
-          {/* Month nav */}
-          <div style={{
-            display: 'flex', alignItems: 'center',
-            background: 'var(--bg-raised)', border: '1px solid var(--border-med)',
-            borderRadius: 'var(--radius-sm)', overflow: 'hidden',
-          }}>
-            <button onClick={() => onChangeMonth(-1)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', padding: '6px 9px', cursor: 'pointer', fontSize: 14, lineHeight: 1 }}>
-              <ChevronLeft size={14} />
-            </button>
-            <button
-              onClick={() => { setPickerYear(year); setShowPicker(true) }}
-              style={{
-                background: 'none', border: 'none', color: 'var(--text-primary)',
-                fontWeight: 800, fontSize: 12, cursor: 'pointer', padding: '6px 2px',
-                minWidth: 74, textAlign: 'center', textTransform: 'uppercase',
-                letterSpacing: '0.4px', fontFamily: 'Figtree, sans-serif',
-              }}
-            >
-              {MONTHS[month-1]} {year}
-            </button>
-            <button onClick={() => onChangeMonth(1)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', padding: '6px 9px', cursor: 'pointer', fontSize: 14, lineHeight: 1 }}>
-              <ChevronRight size={14} />
-            </button>
-          </div>
-
-          {/* Avatar */}
           <button
-            onClick={() => setShowProfile(true)}
+            onClick={() => { setPickerYear(year); setShowPicker(true) }}
             style={{
-              width: 30, height: 30, borderRadius: '50%',
-              background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-green))',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 11, fontWeight: 800, color: '#fff',
-              border: '1.5px solid var(--border-med)',
-              cursor: 'pointer', flexShrink: 0, fontFamily: 'Syne, sans-serif',
+              display: 'flex', alignItems: 'center', gap: 4,
+              background: 'var(--bg-raised)', border: '1px solid var(--border-med)',
+              borderRadius: 99, padding: '8px 12px 8px 14px',
+              color: 'var(--text-primary)', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+              textTransform: 'uppercase', letterSpacing: '0.3px',
+              fontFamily: 'Plus Jakarta Sans, sans-serif',
             }}
           >
-            {userInitials || '?'}
+            {MONTHS[month-1]}
+            <ChevronDown size={14} />
+          </button>
+
+          <button
+            onClick={onAdd}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 34, height: 34, borderRadius: '50%',
+              background: 'var(--bg-dark)', border: 'none',
+              color: '#fff', cursor: 'pointer', flexShrink: 0,
+            }}
+          >
+            <Plus size={17} />
           </button>
         </div>
       </header>
 
       {/* Month Picker Modal */}
-      <Modal id="modal-month" open={showPicker} onClose={() => setShowPicker(false)} title="Selecionar Mês">
+      <Modal id="modal-month" open={showPicker} onClose={() => setShowPicker(false)} title="Selecionar mês">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, marginBottom: 16 }}>
-          <button className="btn btn-ghost" style={{ padding: '6px 14px' }} onClick={() => setPickerYear(p => p-1)}>‹</button>
-          <span className="font-mono" style={{ fontWeight: 700, fontSize: 18 }}>{pickerYear}</span>
-          <button className="btn btn-ghost" style={{ padding: '6px 14px' }} onClick={() => setPickerYear(p => p+1)}>›</button>
+          <button className="btn btn-ghost" style={{ padding: '6px 14px' }} onClick={() => setPickerYear(p => p-1)}><ChevronLeft size={14} /></button>
+          <span className="font-display" style={{ fontWeight: 800, fontSize: 18 }}>{pickerYear}</span>
+          <button className="btn btn-ghost" style={{ padding: '6px 14px' }} onClick={() => setPickerYear(p => p+1)}><ChevronRight size={14} /></button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, marginBottom: 16 }}>
           {MONTHS_FULL.map((name, i) => {
@@ -113,12 +111,12 @@ export default function Header({ month, year, onChangeMonth, onSelectMonth, onSy
                 onClick={() => { onSelectMonth(i+1, pickerYear); setShowPicker(false) }}
                 style={{
                   padding: '10px 4px', textAlign: 'center',
-                  background: active ? 'var(--accent-green-dim)' : 'var(--bg-raised)',
-                  border: `1px solid ${active ? 'var(--accent-green)' : 'var(--border-med)'}`,
+                  background: active ? 'var(--bg-dark)' : 'var(--bg-raised)',
+                  border: `1px solid ${active ? 'var(--bg-dark)' : 'var(--border-med)'}`,
                   borderRadius: 'var(--radius-sm)',
-                  color: active ? 'var(--accent-green)' : 'var(--text-secondary)',
-                  fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                  fontFamily: 'Figtree, sans-serif',
+                  color: active ? '#fff' : 'var(--text-secondary)',
+                  fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                  fontFamily: 'Plus Jakarta Sans, sans-serif',
                 }}
               >
                 {MONTHS[i]}
@@ -130,7 +128,7 @@ export default function Header({ month, year, onChangeMonth, onSelectMonth, onSy
       </Modal>
 
       {/* Profile Modal */}
-      <Modal id="modal-profile" open={showProfile} onClose={() => setShowProfile(false)} title="Minha Conta">
+      <Modal id="modal-profile" open={showProfile} onClose={() => setShowProfile(false)} title="Minha conta">
         <div style={{
           display: 'flex', alignItems: 'center', gap: 14,
           padding: '16px', marginBottom: 16,
@@ -139,9 +137,9 @@ export default function Header({ month, year, onChangeMonth, onSelectMonth, onSy
         }}>
           <div style={{
             width: 52, height: 52, borderRadius: '50%', flexShrink: 0,
-            background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-green))',
+            background: 'var(--bg-dark)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 20, fontWeight: 800, color: '#fff', fontFamily: 'Syne, sans-serif',
+            fontSize: 20, fontWeight: 800, color: '#fff', fontFamily: 'Plus Jakarta Sans, sans-serif',
           }}>
             {userInitials || '?'}
           </div>

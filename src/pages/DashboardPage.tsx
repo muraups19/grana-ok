@@ -1,27 +1,28 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
+import { LogOut, ChevronRight, Settings2 } from 'lucide-react'
 
 import { useFinance } from '@/hooks/useFinance'
+import { useAuth } from '@/contexts/AuthContext'
 import type { Transaction, MonthData, AddExpensePayload, AddExtraPayload, EditPayload } from '@/types'
-import { fmtBRL, MONTHS } from '@/lib/utils'
+import { fmtBRL, MONTHS, initials } from '@/lib/utils'
 
 import Header from '@/components/Header'
 import SummaryCards from '@/components/SummaryCards'
 import TransactionItem from '@/components/TransactionItem'
+import BottomNav, { NavTab } from '@/components/BottomNav'
 import ExpenseModal from '@/components/modals/ExpenseModal'
 import ExtraModal from '@/components/modals/ExtraModal'
 import SalaryModal from '@/components/modals/SalaryModal'
 import EditModal from '@/components/modals/EditModal'
 
-type Tab = 'expenses' | 'extras' | 'salary'
-
 // ── Skeleton loader ─────────────────────────────────────────
 function Skeleton() {
   return (
-    <div style={{ padding: '0 14px' }}>
+    <div style={{ padding: '0 16px' }}>
       {[...Array(4)].map((_, i) => (
-        <div key={i} className="skeleton" style={{ height: 68, marginBottom: 8, borderRadius: 12 }} />
+        <div key={i} className="skeleton" style={{ height: 68, marginBottom: 10, borderRadius: 16 }} />
       ))}
     </div>
   )
@@ -39,7 +40,7 @@ function TxSection({ title, items, total, type, onEdit, onDelete }: {
     <>
       <div className="section-head">
         <span className="section-head-title">{title}</span>
-        <span className="section-head-total" style={{ color: type === 'extra' ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+        <span className="section-head-total" style={{ color: type === 'extra' ? 'var(--accent-green)' : 'var(--text-primary)' }}>
           {fmtBRL(total)}
         </span>
       </div>
@@ -57,7 +58,7 @@ export default function DashboardPage() {
 
   const [data, setData] = useState<MonthData>({ expenses: [], extras: [], salary: 0 })
   const [loadingData, setLoadingData] = useState(true)
-  const [activeTab, setActiveTab] = useState<Tab>('expenses')
+  const [activeTab, setActiveTab] = useState<NavTab>('home')
   const [syncing, setSyncing] = useState(false)
 
   // Search filter
@@ -70,6 +71,7 @@ export default function DashboardPage() {
   const [editItem, setEditItem] = useState<Transaction | null>(null)
 
   const { getMonthData, addExpense, addExtra, editTransaction, deleteTransaction, updateSalary, forceSync } = useFinance()
+  const { profile, signOut } = useAuth()
 
   // Default date string for new entries
   const defaultDate = `${year}-${String(month).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
@@ -177,15 +179,16 @@ export default function DashboardPage() {
   const filterBySearch = (items: Transaction[]) =>
     search ? items.filter(i => i.description.toLowerCase().includes(search.toLowerCase()) || (i.bank || '').toLowerCase().includes(search.toLowerCase())) : items
 
-  const tabs: { key: Tab; label: string; count?: number }[] = [
-    { key: 'expenses', label: '💸 Despesas', count: data.expenses.length },
-    { key: 'extras', label: '💰 Extras', count: data.extras.length },
-    { key: 'salary', label: '🏦 Salário' },
-  ]
+  // Recent transactions (for Home tab)
+  const recentAll = [...data.expenses.map(e => ({ ...e, _kind: 'expense' as const })), ...data.extras.map(e => ({ ...e, _kind: 'extra' as const }))]
+    .sort((a, b) => (b.transaction_date || '').localeCompare(a.transaction_date || ''))
+    .slice(0, 5)
+
+  const userInitials = initials(profile?.name ?? profile?.email ?? '?')
 
   return (
     <div
-      style={{ paddingBottom: 80 }}
+      style={{ paddingBottom: 100 }}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
@@ -194,171 +197,223 @@ export default function DashboardPage() {
         onChangeMonth={changeMonth}
         onSelectMonth={(m, y) => { setMonth(m); setYear(y) }}
         onSync={handleSync}
+        onAdd={() => setShowExpense(true)}
         syncing={syncing}
       />
 
-      {/* Summary */}
       <AnimatePresence mode="wait">
         <motion.div
-          key={`${month}-${year}`}
+          key={`${activeTab}-${month}-${year}`}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.25 }}
         >
-          <SummaryCards salary={data.salary} expenses={totalExpenses} extras={totalExtras} />
-        </motion.div>
-      </AnimatePresence>
+          {/* ── HOME ─────────────────────────────────────── */}
+          {activeTab === 'home' && (
+            <>
+              <SummaryCards monthLabel={MONTHS[month - 1]} salary={data.salary} expenses={totalExpenses} extras={totalExtras} />
 
-      {/* Tabs */}
-      <div style={{
-        display: 'flex', padding: '14px 14px 0',
-        borderBottom: '1px solid var(--border-dim)',
-        overflowX: 'auto', scrollbarWidth: 'none',
-      }}>
-        {tabs.map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            style={{
-              padding: '9px 14px', background: 'none', border: 'none',
-              color: activeTab === tab.key ? 'var(--accent-green)' : 'var(--text-muted)',
-              fontWeight: 600, fontSize: 13, cursor: 'pointer',
-              borderBottom: `2px solid ${activeTab === tab.key ? 'var(--accent-green)' : 'transparent'}`,
-              display: 'flex', alignItems: 'center', gap: 6,
-              whiteSpace: 'nowrap', transition: '0.15s',
-              fontFamily: 'Figtree, sans-serif',
-            }}
-          >
-            {tab.label}
-            {tab.count !== undefined && (
-              <span style={{
-                background: activeTab === tab.key ? 'var(--accent-green-dim)' : 'var(--bg-raised)',
-                color: activeTab === tab.key ? 'var(--accent-green)' : 'var(--text-muted)',
-                fontSize: 10, padding: '2px 6px', borderRadius: 99, fontWeight: 700,
-                fontFamily: 'JetBrains Mono, monospace',
-              }}>
-                {tab.count}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
+              <div style={{ padding: '18px 16px 0' }}>
+                <div className="section-head" style={{ marginTop: 0 }}>
+                  <span className="section-head-title">Últimas transações</span>
+                  <button
+                    onClick={() => setActiveTab('expenses')}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Ver todas
+                  </button>
+                </div>
 
-      {/* Tab content */}
-      <div style={{ padding: '12px 14px' }}>
-        {/* Expenses tab */}
-        {activeTab === 'expenses' && (
-          <>
-            <button className="btn-add" onClick={() => setShowExpense(true)}>
-              + Nova Compra / Conta Fixa
-            </button>
-
-            {/* Search */}
-            {data.expenses.length > 3 && (
-              <input
-                className="form-control"
-                placeholder="🔍 Buscar despesa..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                style={{ marginBottom: 12, fontSize: 14 }}
-              />
-            )}
-
-            {loadingData ? <Skeleton /> : (
-              <AnimatePresence>
-                {data.expenses.length === 0 ? (
+                {loadingData ? <Skeleton /> : recentAll.length === 0 ? (
                   <div className="empty-state">
-                    <span className="empty-icon">💸</span>
-                    Nenhuma despesa em {MONTHS[month - 1]}/{year}
-                    <button className="btn btn-ghost" style={{ marginTop: 8, fontSize: 13 }} onClick={() => setShowExpense(true)}>
-                      + Adicionar despesa
+                    <span className="empty-icon">📭</span>
+                    Nenhum lançamento em {MONTHS[month - 1]}/{year}
+                  </div>
+                ) : (
+                  recentAll.map(item => (
+                    <TransactionItem
+                      key={item.id}
+                      item={item}
+                      type={item._kind}
+                      onEdit={item._kind === 'expense' ? setEditItem : undefined}
+                      onDelete={handleDelete}
+                    />
+                  ))
+                )}
+              </div>
+            </>
+          )}
+
+          {/* ── CONTAS (despesas) ────────────────────────── */}
+          {activeTab === 'expenses' && (
+            <div style={{ padding: '10px 16px' }}>
+              <button className="btn-add" onClick={() => setShowExpense(true)}>
+                + Nova compra / conta fixa
+              </button>
+
+              {data.expenses.length > 3 && (
+                <input
+                  className="form-control"
+                  placeholder="Buscar despesa..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  style={{ marginBottom: 12, fontSize: 14 }}
+                />
+              )}
+
+              {loadingData ? <Skeleton /> : (
+                <AnimatePresence>
+                  {data.expenses.length === 0 ? (
+                    <div className="empty-state">
+                      <span className="empty-icon">🧾</span>
+                      Nenhuma despesa em {MONTHS[month - 1]}/{year}
+                      <button className="btn btn-ghost" style={{ marginTop: 8, fontSize: 13 }} onClick={() => setShowExpense(true)}>
+                        + Adicionar despesa
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <TxSection title="Contas fixas" items={filterBySearch(fixedItems)} total={fixedItems.reduce((s, i) => s + i.amount, 0)} type="expense" onEdit={setEditItem} onDelete={handleDelete} />
+                      <TxSection title="Parcelados" items={filterBySearch(parcelItems)} total={parcelItems.reduce((s, i) => s + i.amount, 0)} type="expense" onEdit={setEditItem} onDelete={handleDelete} />
+                      <TxSection title="Outras despesas" items={filterBySearch(otherItems)} total={otherItems.reduce((s, i) => s + i.amount, 0)} type="expense" onEdit={setEditItem} onDelete={handleDelete} />
+                      {filterBySearch(data.expenses).length === 0 && search && (
+                        <div className="empty-state" style={{ padding: '24px 0' }}>
+                          Nenhum resultado para "{search}"
+                        </div>
+                      )}
+                    </>
+                  )}
+                </AnimatePresence>
+              )}
+            </div>
+          )}
+
+          {/* ── ANÁLISE (extras + salário) ───────────────── */}
+          {activeTab === 'extras' && (
+            <div style={{ padding: '10px 16px' }}>
+              <div style={{
+                background: 'linear-gradient(155deg, #17171C 0%, #0A0A0D 100%)',
+                borderRadius: 'var(--radius-lg)', padding: '22px 20px',
+                textAlign: 'center', marginBottom: 18,
+              }}>
+                <div style={{ fontSize: 12, color: 'var(--text-on-dark-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: 700, marginBottom: 8 }}>
+                  Salário base — {MONTHS[month - 1]} {year}
+                </div>
+                <div className="font-display" style={{ fontSize: 32, fontWeight: 800, color: '#fff', letterSpacing: '-1px', marginBottom: 4 }}>
+                  {fmtBRL(data.salary)}
+                </div>
+                {totalExtras > 0 && (
+                  <div style={{ fontSize: 13, color: 'var(--text-on-dark-muted)' }}>
+                    + {fmtBRL(totalExtras)} extras = {fmtBRL(data.salary + totalExtras)} total
+                  </div>
+                )}
+                <button
+                  className="btn btn-ghost"
+                  style={{ width: '100%', marginTop: 16, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.14)', color: '#fff' }}
+                  onClick={() => setShowSalary(true)}
+                >
+                  <Settings2 size={14} /> Configurar reajuste salarial
+                </button>
+              </div>
+
+              <button className="btn-add green" onClick={() => setShowExtra(true)}>
+                + Nova entrada extra
+              </button>
+
+              {loadingData ? <Skeleton /> : (
+                data.extras.length === 0 ? (
+                  <div className="empty-state">
+                    <span className="empty-icon">💰</span>
+                    Nenhuma entrada extra este mês.
+                    <button className="btn btn-ghost" style={{ marginTop: 8, fontSize: 13 }} onClick={() => setShowExtra(true)}>
+                      + Adicionar entrada
                     </button>
                   </div>
                 ) : (
                   <>
-                    <TxSection title="Contas Fixas" items={filterBySearch(fixedItems)} total={fixedItems.reduce((s, i) => s + i.amount, 0)} type="expense" onEdit={setEditItem} onDelete={handleDelete} />
-                    <TxSection title="Parcelados" items={filterBySearch(parcelItems)} total={parcelItems.reduce((s, i) => s + i.amount, 0)} type="expense" onEdit={setEditItem} onDelete={handleDelete} />
-                    <TxSection title="Outras Despesas" items={filterBySearch(otherItems)} total={otherItems.reduce((s, i) => s + i.amount, 0)} type="expense" onEdit={setEditItem} onDelete={handleDelete} />
-                    {filterBySearch(data.expenses).length === 0 && search && (
-                      <div className="empty-state" style={{ padding: '24px 0' }}>
-                        Nenhum resultado para "{search}"
-                      </div>
-                    )}
+                    <div className="section-head">
+                      <span className="section-head-title">Entradas extras</span>
+                      <span className="section-head-total" style={{ color: 'var(--accent-green)' }}>
+                        {fmtBRL(totalExtras)}
+                      </span>
+                    </div>
+                    {data.extras.map(item => (
+                      <TransactionItem key={item.id} item={item} type="extra" onDelete={handleDelete} />
+                    ))}
                   </>
-                )}
-              </AnimatePresence>
-            )}
-          </>
-        )}
-
-        {/* Extras tab */}
-        {activeTab === 'extras' && (
-          <>
-            <button className="btn-add green" onClick={() => setShowExtra(true)}>
-              + Nova Entrada Extra
-            </button>
-            {loadingData ? <Skeleton /> : (
-              data.extras.length === 0 ? (
-                <div className="empty-state">
-                  <span className="empty-icon">💰</span>
-                  Nenhuma entrada extra este mês.
-                  <button className="btn btn-ghost" style={{ marginTop: 8, fontSize: 13 }} onClick={() => setShowExtra(true)}>
-                    + Adicionar entrada
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <div className="section-head">
-                    <span className="section-head-title">Entradas Extras</span>
-                    <span className="section-head-total" style={{ color: 'var(--accent-green)' }}>
-                      {fmtBRL(totalExtras)}
-                    </span>
-                  </div>
-                  {data.extras.map(item => (
-                    <TransactionItem key={item.id} item={item} type="extra" onDelete={handleDelete} />
-                  ))}
-                </>
-              )
-            )}
-          </>
-        )}
-
-        {/* Salary tab */}
-        {activeTab === 'salary' && (
-          <>
-            <div style={{
-              background: 'linear-gradient(135deg, var(--bg-surface), var(--bg-raised))',
-              border: '1px solid var(--border-med)',
-              borderRadius: 'var(--radius-lg)', padding: '28px 20px',
-              textAlign: 'center', marginBottom: 14,
-            }}>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', fontWeight: 600, marginBottom: 8 }}>
-                Salário base — {MONTHS[month - 1]} {year}
-              </div>
-              <div className="font-mono" style={{ fontSize: 36, fontWeight: 700, color: 'var(--accent-green)', letterSpacing: '-1px', marginBottom: 4 }}>
-                {fmtBRL(data.salary)}
-              </div>
-              {totalExtras > 0 && (
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                  + {fmtBRL(totalExtras)} extras = {fmtBRL(data.salary + totalExtras)} total
-                </div>
+                )
               )}
             </div>
-            <button
-              className="btn btn-ghost"
-              style={{ width: '100%', padding: '13px', marginBottom: 8 }}
-              onClick={() => setShowSalary(true)}
-            >
-              ⚙️ Configurar Reajuste Salarial
-            </button>
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.6 }}>
-              O reajuste aplica o novo valor a partir do mês escolhido,<br />
-              preservando o histórico de meses anteriores.
-            </p>
-          </>
-        )}
-      </div>
+          )}
+
+          {/* ── CONFIG ───────────────────────────────────── */}
+          {activeTab === 'config' && (
+            <div style={{ padding: '10px 16px' }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 14,
+                padding: '18px', marginBottom: 16,
+                background: 'var(--bg-surface)', borderRadius: 'var(--radius-lg)',
+                border: '1px solid var(--border-sub)',
+              }}>
+                <div style={{
+                  width: 54, height: 54, borderRadius: '50%', flexShrink: 0,
+                  background: 'var(--bg-dark)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 20, fontWeight: 800, color: '#fff',
+                }}>
+                  {userInitials || '?'}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 16, textTransform: 'capitalize' }}>
+                    {profile?.name || profile?.email || '—'}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>{profile?.email || '—'}</div>
+                </div>
+              </div>
+
+              <button
+                className="btn btn-ghost"
+                style={{ width: '100%', marginBottom: 10, justifyContent: 'space-between', padding: '14px 16px' }}
+                onClick={() => setShowSalary(true)}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Settings2 size={15} /> Reajuste salarial
+                </span>
+                <ChevronRight size={15} />
+              </button>
+
+              <button
+                className="btn btn-ghost"
+                style={{ width: '100%', marginBottom: 10, justifyContent: 'space-between', padding: '14px 16px' }}
+                onClick={handleSync}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  Sincronizar dados
+                </span>
+                <ChevronRight size={15} />
+              </button>
+
+              <button
+                className="btn btn-ghost"
+                style={{ width: '100%', marginBottom: 10, justifyContent: 'space-between', padding: '14px 16px', color: 'var(--accent-red)' }}
+                onClick={signOut}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <LogOut size={15} /> Sair da conta
+                </span>
+                <ChevronRight size={15} />
+              </button>
+
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginTop: 20, lineHeight: 1.6 }}>
+                Dados armazenados exclusivamente no Supabase,<br />vinculados à sua conta Google.
+              </p>
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
+
+      <BottomNav active={activeTab} onChange={setActiveTab} />
 
       {/* Modals */}
       <ExpenseModal open={showExpense} onClose={() => setShowExpense(false)} onSave={handleAddExpense} defaultDate={defaultDate} />

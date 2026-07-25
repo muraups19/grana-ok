@@ -27,15 +27,15 @@ export default function LoginPage() {
     >
       {/* Background glow effects */}
       <div style={{
-        position: 'absolute', top: '20%', left: '50%', transform: 'translateX(-50%)',
-        width: 400, height: 400, borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(79,142,247,0.08) 0%, transparent 70%)',
+        position: 'absolute', top: '15%', left: '50%', transform: 'translateX(-50%)',
+        width: 420, height: 420, borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(47,196,130,0.14) 0%, transparent 70%)',
         pointerEvents: 'none',
       }} />
       <div style={{
-        position: 'absolute', bottom: '10%', right: '-10%',
+        position: 'absolute', bottom: '5%', right: '-10%',
         width: 300, height: 300, borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(0,214,143,0.06) 0%, transparent 70%)',
+        background: 'radial-gradient(circle, rgba(20,20,27,0.05) 0%, transparent 70%)',
         pointerEvents: 'none',
       }} />
 
@@ -99,11 +99,11 @@ export default function LoginPage() {
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
             padding: '15px 20px',
             background: '#fff', color: '#1a1a1a',
-            border: 'none', borderRadius: 'var(--radius-sm)',
-            fontFamily: 'Figtree, sans-serif',
+            border: '1px solid var(--border-med)', borderRadius: 99,
+            fontFamily: 'Plus Jakarta Sans, sans-serif',
             fontSize: 15, fontWeight: 700, cursor: 'pointer',
             transition: 'all 0.18s', letterSpacing: 0.2,
-            boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
+            boxShadow: '0 4px 24px rgba(20,20,27,0.10)',
           }}
           onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.97)' }}
           onMouseUp  ={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)' }}
