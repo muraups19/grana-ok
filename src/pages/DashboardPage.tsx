@@ -4,18 +4,22 @@ import toast from 'react-hot-toast'
 import { LogOut, ChevronRight, Settings2 } from 'lucide-react'
 
 import { useFinance } from '@/hooks/useFinance'
+import { useInvestments } from '@/hooks/useInvestments'
 import { useAuth } from '@/contexts/AuthContext'
-import type { Transaction, MonthData, AddExpensePayload, AddExtraPayload, EditPayload } from '@/types'
+import type { Transaction, MonthData, AddExpensePayload, AddExtraPayload, EditPayload, Investment, AddInvestmentPayload, EditInvestmentPayload } from '@/types'
 import { fmtBRL, MONTHS, initials } from '@/lib/utils'
 
 import Header from '@/components/Header'
 import SummaryCards from '@/components/SummaryCards'
+import InvestmentSummary from '@/components/InvestmentSummary'
+import InvestmentItem from '@/components/InvestmentItem'
 import TransactionItem from '@/components/TransactionItem'
 import BottomNav, { NavTab } from '@/components/BottomNav'
 import ExpenseModal from '@/components/modals/ExpenseModal'
 import ExtraModal from '@/components/modals/ExtraModal'
 import SalaryModal from '@/components/modals/SalaryModal'
 import EditModal from '@/components/modals/EditModal'
+import InvestmentModal from '@/components/modals/InvestmentModal'
 
 // ── Skeleton loader ─────────────────────────────────────────
 function Skeleton() {
@@ -61,6 +65,12 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<NavTab>('home')
   const [syncing, setSyncing] = useState(false)
 
+  // Investments (não são vinculados a mês/ano — carteira corrente)
+  const [investments, setInvestments] = useState<Investment[]>([])
+  const [loadingInvestments, setLoadingInvestments] = useState(true)
+  const [showInvestment, setShowInvestment] = useState(false)
+  const [editInvestmentItem, setEditInvestmentItem] = useState<Investment | null>(null)
+
   // Search filter
   const [search, setSearch] = useState('')
 
@@ -71,10 +81,12 @@ export default function DashboardPage() {
   const [editItem, setEditItem] = useState<Transaction | null>(null)
 
   const { getMonthData, addExpense, addExtra, editTransaction, deleteTransaction, updateSalary, forceSync } = useFinance()
+  const { getInvestments, addInvestment, editInvestment, deleteInvestment } = useInvestments()
   const { profile, signOut } = useAuth()
 
   // Default date string for new entries
   const defaultDate = `${year}-${String(month).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const todayISO = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
   // ── Load data ─────────────────────────────────────────────
   const load = useCallback(async () => {
@@ -90,6 +102,20 @@ export default function DashboardPage() {
   }, [month, year, getMonthData])
 
   useEffect(() => { load() }, [load])
+
+  // ── Load investments (carteira independente do mês navegado) ─
+  const loadInvestments = useCallback(async () => {
+    try {
+      const inv = await getInvestments()
+      setInvestments(inv)
+    } catch (e: unknown) {
+      toast.error((e as Error).message ?? 'Erro ao carregar investimentos')
+    } finally {
+      setLoadingInvestments(false)
+    }
+  }, [getInvestments])
+
+  useEffect(() => { loadInvestments() }, [loadInvestments])
 
   // Swipe gesture for month change on mobile
   const touchStartX = useRef<number>(0)
@@ -166,6 +192,29 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleAddInvestment(payload: AddInvestmentPayload) {
+    await toast.promise(addInvestment(payload), {
+      loading: 'Salvando...', success: 'Investimento adicionado!', error: e => e.message,
+    })
+    await loadInvestments()
+  }
+
+  async function handleEditInvestment(id: string, payload: EditInvestmentPayload) {
+    await toast.promise(editInvestment(id, payload), {
+      loading: 'Salvando...', success: 'Investimento atualizado!', error: e => e.message,
+    })
+    setEditInvestmentItem(null)
+    await loadInvestments()
+  }
+
+  async function handleDeleteInvestment(item: Investment) {
+    if (!window.confirm(`Excluir "${item.name}"? Esta ação não pode ser desfeita.`)) return
+    await toast.promise(deleteInvestment(item.id), {
+      loading: 'Removendo...', success: 'Investimento excluído!', error: e => e.message,
+    })
+    await loadInvestments()
+  }
+
   // ── Computed values ───────────────────────────────────────
   const totalExpenses = data.expenses.reduce((s, e) => s + e.amount, 0)
   const totalExtras = data.extras.reduce((s, e) => s + e.amount, 0)
@@ -174,6 +223,10 @@ export default function DashboardPage() {
   const fixedItems = data.expenses.filter(e => e.installment.toLowerCase() === 'fixo')
   const parcelItems = data.expenses.filter(e => /^\d+\/\d+$/.test(e.installment))
   const otherItems = data.expenses.filter(e => e.installment.toLowerCase() !== 'fixo' && !/^\d+\/\d+$/.test(e.installment))
+
+  // Investment totals
+  const totalInvested = investments.reduce((s, i) => s + i.amount_invested, 0)
+  const totalCurrentValue = investments.reduce((s, i) => s + i.current_value, 0)
 
   // Search filter
   const filterBySearch = (items: Transaction[]) =>
@@ -285,6 +338,46 @@ export default function DashboardPage() {
                     </>
                   )}
                 </AnimatePresence>
+              )}
+            </div>
+          )}
+
+          {/* ── INVESTIMENTOS ────────────────────────────── */}
+          {activeTab === 'investments' && (
+            <div style={{ padding: '10px 16px' }}>
+              <InvestmentSummary totalInvested={totalInvested} totalCurrent={totalCurrentValue} />
+
+              <button className="btn-add green" onClick={() => setShowInvestment(true)}>
+                + Novo investimento
+              </button>
+
+              {loadingInvestments ? <Skeleton /> : (
+                investments.length === 0 ? (
+                  <div className="empty-state">
+                    <span className="empty-icon">📈</span>
+                    Nenhum investimento cadastrado ainda.
+                    <button className="btn btn-ghost" style={{ marginTop: 8, fontSize: 13 }} onClick={() => setShowInvestment(true)}>
+                      + Adicionar investimento
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="section-head" style={{ marginTop: 0 }}>
+                      <span className="section-head-title">Meus ativos</span>
+                      <span className="section-head-total">
+                        {investments.length} {investments.length === 1 ? 'ativo' : 'ativos'}
+                      </span>
+                    </div>
+                    {investments.map(item => (
+                      <InvestmentItem
+                        key={item.id}
+                        item={item}
+                        onEdit={setEditInvestmentItem}
+                        onDelete={handleDeleteInvestment}
+                      />
+                    ))}
+                  </>
+                )
               )}
             </div>
           )}
@@ -421,6 +514,14 @@ export default function DashboardPage() {
       <SalaryModal open={showSalary} onClose={() => setShowSalary(false)} onSave={handleSalary}
         currentSalary={data.salary} currentMonth={month} currentYear={year} />
       <EditModal open={!!editItem} onClose={() => setEditItem(null)} onSave={handleEdit} item={editItem} />
+      <InvestmentModal
+        open={showInvestment || !!editInvestmentItem}
+        onClose={() => { setShowInvestment(false); setEditInvestmentItem(null) }}
+        onSave={handleAddInvestment}
+        onSaveEdit={handleEditInvestment}
+        defaultDate={todayISO}
+        item={editInvestmentItem}
+      />
     </div>
   )
 }

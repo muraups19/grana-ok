@@ -93,6 +93,14 @@ body {
 }
 .form-control:focus    { border-color: var(--text-primary); }
 .form-control::placeholder { color: var(--text-muted); }
+select.form-control {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%238A8B99'%3e%3cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 36px;
+  cursor: pointer;
+}
 .form-label {
   display: block;
   font-size: 11px;
@@ -302,8 +310,8 @@ body {
 .bottom-nav-item {
   display: flex; flex-direction: column; align-items: center; gap: 3px;
   background: none; border: none; cursor: pointer;
-  padding: 6px 14px; border-radius: 14px;
-  color: var(--text-muted); font-size: 11px; font-weight: 700;
+  padding: 6px 10px; border-radius: 14px;
+  color: var(--text-muted); font-size: 10.5px; font-weight: 700;
   font-family: 'Plus Jakarta Sans', sans-serif;
   transition: all 0.16s;
 }

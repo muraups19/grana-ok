@@ -42,11 +42,28 @@ CREATE TABLE IF NOT EXISTS public.salary_rules (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Investimentos (carteira do usuário, independente de mês/ano)
+CREATE TABLE IF NOT EXISTS public.investments (
+  id               UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id          UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  name             TEXT NOT NULL,
+  type             TEXT NOT NULL DEFAULT 'outro'
+                   CHECK (type IN ('renda_fixa','tesouro','acoes','fundos','fiis','cripto','outro')),
+  broker           TEXT DEFAULT '',
+  amount_invested  NUMERIC(12,2) NOT NULL DEFAULT 0,
+  current_value    NUMERIC(12,2) NOT NULL DEFAULT 0,
+  invested_at      DATE,
+  notes            TEXT,
+  created_at       TIMESTAMPTZ DEFAULT NOW(),
+  updated_at       TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ── ROW LEVEL SECURITY ───────────────────────────────────────
 
 ALTER TABLE public.profiles     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.salary_rules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.investments  ENABLE ROW LEVEL SECURITY;
 
 -- Profiles: só o próprio usuário
 CREATE POLICY "profiles_self" ON public.profiles
@@ -58,6 +75,10 @@ CREATE POLICY "transactions_self" ON public.transactions
 
 -- Salary rules: só o próprio usuário
 CREATE POLICY "salary_rules_self" ON public.salary_rules
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- Investments: só o próprio usuário
+CREATE POLICY "investments_self" ON public.investments
   FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 -- ── ÍNDICES ──────────────────────────────────────────────────
@@ -72,6 +93,9 @@ CREATE INDEX IF NOT EXISTS idx_tx_group
 CREATE INDEX IF NOT EXISTS idx_salary_user_date
   ON public.salary_rules(user_id, date_num);
 
+CREATE INDEX IF NOT EXISTS idx_investments_user
+  ON public.investments(user_id);
+
 -- ── TRIGGER: updated_at automático ──────────────────────────
 
 CREATE OR REPLACE FUNCTION public.set_updated_at()
@@ -84,6 +108,10 @@ $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER trg_transactions_updated
   BEFORE UPDATE ON public.transactions
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER trg_investments_updated
+  BEFORE UPDATE ON public.investments
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- ── TRIGGER: criar perfil no cadastro ───────────────────────

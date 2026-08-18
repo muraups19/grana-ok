@@ -1,6 +1,6 @@
-import { Home, Receipt, PiggyBank, Settings } from 'lucide-react'
+import { Home, Receipt, PiggyBank, Settings, TrendingUp } from 'lucide-react'
 
-export type NavTab = 'home' | 'expenses' | 'extras' | 'config'
+export type NavTab = 'home' | 'expenses' | 'investments' | 'extras' | 'config'
 
 interface Props {
   active: NavTab
@@ -8,10 +8,11 @@ interface Props {
 }
 
 const items: { key: NavTab; label: string; icon: typeof Home }[] = [
-  { key: 'expenses', label: 'Contas',  icon: Receipt },
-  { key: 'home',     label: 'Home',    icon: Home },
-  { key: 'extras',   label: 'Análise', icon: PiggyBank },
-  { key: 'config',   label: 'Config',  icon: Settings },
+  { key: 'expenses',    label: 'Contas',       icon: Receipt },
+  { key: 'home',        label: 'Home',         icon: Home },
+  { key: 'investments', label: 'Investir',     icon: TrendingUp },
+  { key: 'extras',      label: 'Análise',      icon: PiggyBank },
+  { key: 'config',      label: 'Config',       icon: Settings },
 ]
 
 export default function BottomNav({ active, onChange }: Props) {

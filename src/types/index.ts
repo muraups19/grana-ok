@@ -33,6 +33,42 @@ export interface MonthData {
   salary: number
 }
 
+export interface Investment {
+  id: string
+  user_id: string
+  name: string
+  type: InvestmentType
+  broker: string
+  amount_invested: number
+  current_value: number
+  invested_at: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type InvestmentType = 'renda_fixa' | 'tesouro' | 'acoes' | 'fundos' | 'fiis' | 'cripto' | 'outro'
+
+export interface AddInvestmentPayload {
+  name: string
+  type: InvestmentType
+  broker: string
+  amount_invested: number
+  current_value: number
+  invested_at: string
+  notes?: string
+}
+
+export interface EditInvestmentPayload {
+  name?: string
+  type?: InvestmentType
+  broker?: string
+  amount_invested?: number
+  current_value?: number
+  invested_at?: string | null
+  notes?: string | null
+}
+
 export type ExpenseInputType = 'total' | 'parcela' | 'fixo'
 
 export interface AddExpensePayload {

@@ -60,3 +60,28 @@ export function initials(name: string): string {
     .map(w => w[0]?.toUpperCase() ?? '')
     .join('')
 }
+
+/** Metadados de exibição por tipo de investimento */
+export const INVESTMENT_TYPES: { value: string; label: string; icon: string }[] = [
+  { value: 'renda_fixa', label: 'Renda Fixa',      icon: '🏦' },
+  { value: 'tesouro',    label: 'Tesouro Direto',  icon: '🏛️' },
+  { value: 'acoes',      label: 'Ações',           icon: '📈' },
+  { value: 'fundos',     label: 'Fundos',          icon: '📊' },
+  { value: 'fiis',       label: 'FIIs',            icon: '🏢' },
+  { value: 'cripto',     label: 'Criptomoedas',    icon: '₿'  },
+  { value: 'outro',      label: 'Outro',           icon: '💼' },
+]
+
+export function investmentTypeLabel(type: string): string {
+  return INVESTMENT_TYPES.find(t => t.value === type)?.label ?? 'Outro'
+}
+
+export function investmentTypeIcon(type: string): string {
+  return INVESTMENT_TYPES.find(t => t.value === type)?.icon ?? '💼'
+}
+
+/** Formata percentual com sinal: +12,3% / -4,0% */
+export function fmtPct(value: number): string {
+  const sign = value > 0 ? '+' : ''
+  return `${sign}${value.toFixed(1).replace('.', ',')}%`
+}
