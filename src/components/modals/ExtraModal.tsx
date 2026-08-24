@@ -44,7 +44,7 @@ export default function ExtraModal({ open, onClose, onSave, defaultDate }: Props
       <div style={{ marginBottom: 14 }}>
         <label className="form-label">Valor (R$)</label>
         <input
-          type="number" step="0.01" inputMode="decimal"
+          type="text" step="0.01" inputMode="decimal"
           className="form-control" value={amount}
           onChange={e => setAmount(e.target.value)} placeholder="0,00"
         />

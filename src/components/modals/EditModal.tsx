@@ -75,7 +75,7 @@ export default function EditModal({ open, onClose, onSave, item }: Props) {
         <div>
           <label className="form-label">Valor (R$)</label>
           <input
-            type="number" step="0.01" inputMode="decimal"
+            type="text" step="0.01" inputMode="decimal"
             className="form-control" value={amount}
             onChange={e => setAmount(e.target.value)}
           />

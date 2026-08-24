@@ -102,7 +102,7 @@ export default function InvestmentModal({ open, onClose, onSave, onSaveEdit, def
         <div>
           <label className="form-label">Valor investido (R$)</label>
           <input
-            type="number" step="0.01" inputMode="decimal"
+            type="text" step="0.01" inputMode="decimal"
             className="form-control" value={invested}
             onChange={e => setInvested(e.target.value)} placeholder="0,00"
           />
@@ -110,7 +110,7 @@ export default function InvestmentModal({ open, onClose, onSave, onSaveEdit, def
         <div>
           <label className="form-label">Valor atual (R$)</label>
           <input
-            type="number" step="0.01" inputMode="decimal"
+            type="text" step="0.01" inputMode="decimal"
             className="form-control" value={current}
             onChange={e => setCurrent(e.target.value)}
             placeholder={invested || '0,00'}

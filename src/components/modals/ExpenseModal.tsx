@@ -89,7 +89,7 @@ export default function ExpenseModal({ open, onClose, onSave, defaultDate }: Pro
             {inputType === 'total' ? 'Valor total (R$)' : inputType === 'fixo' ? 'Valor mensal (R$)' : 'Valor por parcela (R$)'}
           </label>
           <input
-            type="number" step="0.01" inputMode="decimal"
+            type="text" step="0.01" inputMode="decimal"
             className="form-control" value={amount}
             onChange={e => setAmount(e.target.value)}
             placeholder="0,00"
