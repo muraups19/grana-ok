@@ -16,12 +16,12 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       }}>
         <div style={{
           width: 36, height: 36,
-          border: '3px solid var(--border-sub)',
-          borderTopColor: 'var(--accent-green)',
+          border: '3px solid var(--fill)',
+          borderTopColor: 'var(--tint)',
           borderRadius: '50%',
           animation: 'spin 0.8s linear infinite',
         }} />
-        <span style={{ fontSize: 13, color: 'var(--text-muted)', fontFamily: 'Figtree, sans-serif' }}>
+        <span style={{ fontSize: 13, color: 'var(--text-muted)', fontFamily: 'var(--font)' }}>
           Carregando...
         </span>
       </div>

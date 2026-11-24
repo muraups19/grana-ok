@@ -10,8 +10,27 @@ export interface Transaction {
   month: number
   year: number
   transaction_date: string | null
+  category: string | null
   created_at: string
   updated_at: string
+}
+
+export interface Card {
+  id: string
+  user_id: string
+  name: string
+  closing_day: number | null   // null = débito / pix (sem fatura)
+  due_day: number | null
+  color: string
+  created_at?: string
+  updated_at?: string
+}
+
+export interface CardPayload {
+  name: string
+  closing_day: number | null
+  due_day: number | null
+  color: string
 }
 
 export interface SalaryRule {
@@ -78,12 +97,14 @@ export interface AddExpensePayload {
   date: string          // YYYY-MM-DD
   bank: string
   inputType: ExpenseInputType
+  category: string
 }
 
 export interface AddExtraPayload {
   description: string
   amount: number
   date: string
+  category: string
 }
 
 export interface EditPayload {
@@ -91,4 +112,8 @@ export interface EditPayload {
   amount?: number
   bank?: string
   transaction_date?: string | null
+  category?: string | null
 }
+
+/** Abrangência de edição/exclusão em lançamentos agrupados (parcelas / fixos) */
+export type GroupScope = 'one' | 'future' | 'all'

@@ -1,146 +1,142 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { CalendarClock } from 'lucide-react'
 import Modal from './Modal'
-import type { AddExpensePayload, ExpenseInputType } from '@/types'
-import { fmtBRL } from '@/lib/utils'
-
-const BANKS = ['Nubank', 'Inter', 'Pix', 'Itaú', 'Bradesco', 'C6', 'Santander', 'Caixa', 'BB']
+import type { AddExpensePayload, ExpenseInputType, Card } from '@/types'
+import { fmtBRL, MONTHS_FULL, dayMonth } from '@/lib/utils'
+import { autoCategorize, type CategoryHistory } from '@/lib/categories'
+import { billingFor, findCard } from '@/lib/billing'
+import { Segmented, CategoryPicker, MethodPicker, Callout, parseMoney } from '@/components/ui'
 
 interface Props {
   open: boolean
   onClose: () => void
   onSave: (payload: AddExpensePayload) => Promise<void>
   defaultDate: string
+  cards: Card[]
+  history: CategoryHistory
+  onManageCards: () => void
 }
 
-export default function ExpenseModal({ open, onClose, onSave, defaultDate }: Props) {
+export default function ExpenseModal({ open, onClose, onSave, defaultDate, cards, history, onManageCards }: Props) {
   const [inputType, setInputType] = useState<ExpenseInputType>('total')
-  const [desc,  setDesc ] = useState('')
+  const [desc,   setDesc  ] = useState('')
   const [amount, setAmount] = useState('')
-  const [qty,   setQty  ] = useState('1')
-  const [date,  setDate ] = useState(defaultDate)
-  const [bank,  setBank ] = useState('')
+  const [qty,    setQty   ] = useState('1')
+  const [date,   setDate  ] = useState(defaultDate)
+  const [bank,   setBank  ] = useState('')
+  const [category, setCategory] = useState('outros')
+  const [manualCat, setManualCat] = useState(false)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => { if (open) setDate(defaultDate) }, [open, defaultDate])
 
+  // Categorização automática enquanto digita (até o usuário escolher manualmente)
+  useEffect(() => {
+    if (!manualCat) setCategory(autoCategorize(desc, 'expense', history))
+  }, [desc, manualCat, history])
+
   const reset = () => {
     setDesc(''); setAmount(''); setQty('1'); setBank(''); setSaving(false)
-    setInputType('total')
+    setInputType('total'); setCategory('outros'); setManualCat(false)
   }
   const handleClose = () => { reset(); onClose() }
 
-  const perParcel = (() => {
-    const v = parseFloat(amount) || 0
-    const q = parseInt(qty) || 1
-    if (inputType === 'total' && v > 0 && q > 1) return v / q
-    return null
-  })()
+  const v = parseMoney(amount)
+  const q = Math.max(1, parseInt(qty) || 1)
+  const perParcel = inputType === 'total' && v > 0 && q > 1 ? v / q : null
+
+  const card = findCard(cards, bank)
+  const billing = useMemo(() => (date ? billingFor(date, card) : null), [date, card])
+  const [dy, dm] = date ? date.split('-').map(Number) : [0, 0]
+  const shifted = billing && (billing.month !== dm || billing.year !== dy)
+
+  const canSave = !!desc.trim() && v > 0 && !!date
 
   const handleSubmit = async () => {
-    if (!desc.trim() || !amount || !date) return
-    const v = parseFloat(amount)
-    if (isNaN(v) || v <= 0) return
+    if (!canSave) return
     setSaving(true)
     try {
-      await onSave({ description: desc.trim(), amount: v, qty: parseInt(qty)||1, date, bank: bank.trim(), inputType })
+      await onSave({ description: desc.trim(), amount: v, qty: inputType === 'fixo' ? 1 : q, date, bank: bank.trim(), inputType, category })
       handleClose()
-    } finally {
+    } catch {
       setSaving(false)
     }
   }
 
   return (
-    <Modal id="modal-expense" open={open} onClose={handleClose} title="Lançar Despesa">
-      {/* Tipo */}
-      <div style={{ marginBottom: 16 }}>
-        <label className="form-label">Tipo de lançamento</label>
-        <div className="tipo-pills">
-          {([
-            ['total',  '📦', 'Total', 'App divide'],
-            ['parcela','📋', 'Parcela', 'Valor fixo'],
-            ['fixo',   '🔄', 'Fixo', 'Todo mês'],
-          ] as [ExpenseInputType, string, string, string][]).map(([t, icon, label, sub]) => (
-            <div
-              key={t}
-              className={`tipo-pill${inputType === t ? ' active' : ''}`}
-              onClick={() => setInputType(t)}
-            >
-              {icon}<br /><span style={{ fontWeight: 700 }}>{label}</span><br />
-              <span style={{ fontSize: 10, opacity: 0.7 }}>{sub}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Descrição */}
-      <div style={{ marginBottom: 14 }}>
-        <label className="form-label">Descrição</label>
-        <input
-          className="form-control" value={desc} onChange={e => setDesc(e.target.value)}
-          placeholder="Ex: Netflix, Luz, Celular..."
-          autoFocus={open}
+    <Modal id="modal-expense" open={open} onClose={handleClose} title="Nova despesa">
+      <div className="field">
+        <Segmented
+          layoutId="exp-type"
+          value={inputType}
+          onChange={setInputType}
+          options={[
+            { value: 'total',   label: 'Valor total', sub: 'App divide' },
+            { value: 'parcela', label: 'Por parcela', sub: 'Valor fixo' },
+            { value: 'fixo',    label: 'Fixa',        sub: 'Todo mês' },
+          ]}
         />
       </div>
 
-      {/* Valor + Parcelas */}
-      <div style={{ display: 'grid', gridTemplateColumns: inputType === 'fixo' ? '1fr' : '1fr 1fr', gap: 10, marginBottom: 14 }}>
-        <div>
+      <div className="field">
+        <label className="form-label">Descrição</label>
+        <input
+          className="form-control" value={desc} onChange={e => setDesc(e.target.value)}
+          placeholder="Ex: Netflix, iFood, Mercado…" autoFocus enterKeyHint="next"
+        />
+      </div>
+
+      <CategoryPicker kind="expense" value={category} auto={!manualCat && !!desc.trim()}
+        onChange={id => { setCategory(id); setManualCat(true) }} />
+
+      <div className="field-row" style={inputType === 'fixo' ? { gridTemplateColumns: '1fr' } : undefined}>
+        <div className="field">
           <label className="form-label">
-            {inputType === 'total' ? 'Valor total (R$)' : inputType === 'fixo' ? 'Valor mensal (R$)' : 'Valor por parcela (R$)'}
+            {inputType === 'total' ? 'Valor total' : inputType === 'fixo' ? 'Valor mensal' : 'Valor da parcela'}
           </label>
           <input
-            type="text" step="0.01" inputMode="decimal"
-            className="form-control" value={amount}
-            onChange={e => setAmount(e.target.value)}
-            placeholder="0,00"
+            type="text" inputMode="decimal" className="form-control num" value={amount}
+            onChange={e => setAmount(e.target.value)} placeholder="R$ 0,00"
           />
         </div>
         {inputType !== 'fixo' && (
-          <div>
-            <label className="form-label">Qtd. parcelas</label>
-            <input
-              type="number" min="1" inputMode="numeric"
-              className="form-control" value={qty}
-              onChange={e => setQty(e.target.value)}
-            />
+          <div className="field">
+            <label className="form-label">Parcelas</label>
+            <input type="number" min="1" max="72" inputMode="numeric" className="form-control num" value={qty} onChange={e => setQty(e.target.value)} />
           </div>
         )}
       </div>
 
-      {/* Preview parcela */}
       {perParcel !== null && (
-        <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          padding: '9px 12px', marginBottom: 14, borderRadius: 'var(--radius-sm)',
-          background: 'var(--accent-green-dim)', border: '1px solid rgba(0,214,143,0.2)',
-        }}>
-          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Valor por parcela</span>
-          <span style={{ fontFamily: 'JetBrains Mono', fontWeight: 700, color: 'var(--accent-green)', fontSize: 14 }}>
-            {fmtBRL(perParcel)} × {qty}
-          </span>
-        </div>
+        <Callout tone="tint">
+          <strong className="num">{q}× de {fmtBRL(perParcel)}</strong>
+        </Callout>
       )}
 
-      {/* Data + Banco */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
-        <div>
-          <label className="form-label">Data</label>
-          <input type="date" className="form-control" value={date} onChange={e => setDate(e.target.value)} />
-        </div>
-        <div>
-          <label className="form-label">Banco / Método</label>
-          <input
-            className="form-control" list="banks-list" value={bank}
-            onChange={e => setBank(e.target.value)} placeholder="Ex: Nubank"
-          />
-          <datalist id="banks-list">{BANKS.map(b => <option key={b} value={b} />)}</datalist>
-        </div>
+      <MethodPicker cards={cards} value={bank} onChange={setBank} onManageCards={onManageCards} />
+
+      <div className="field">
+        <label className="form-label">Data da compra</label>
+        <input type="date" className="form-control" value={date} onChange={e => setDate(e.target.value)} />
       </div>
 
-      <button className="btn btn-primary" onClick={handleSubmit} disabled={saving}>
-        {saving ? '⏳ Salvando...' : '✅ Salvar Lançamento'}
+      {billing && card?.closing_day && (
+        <Callout tone={shifted ? 'warn' : 'tint'} icon={<CalendarClock size={16} />}>
+          Entra na fatura de <strong>{MONTHS_FULL[billing.month - 1]}/{billing.year}</strong>
+          {billing.closing && <> · fecha {dayMonth(billing.closing)}</>}
+          {billing.due && <> · vence {dayMonth(billing.due)}</>}
+          {inputType !== 'fixo' && q > 1 && <> · última parcela em {lastParcel(billing.month, billing.year, q)}</>}
+        </Callout>
+      )}
+
+      <button className="btn btn-primary" onClick={handleSubmit} disabled={saving || !canSave} style={{ marginTop: 6 }}>
+        {saving ? 'Salvando…' : 'Salvar despesa'}
       </button>
-      <button className="btn-cancel" onClick={handleClose}>Cancelar</button>
     </Modal>
   )
+}
+
+function lastParcel(month: number, year: number, q: number) {
+  const d = new Date(year, month - 1 + q - 1, 1)
+  return `${MONTHS_FULL[d.getMonth()].slice(0, 3).toLowerCase()}/${d.getFullYear()}`
 }

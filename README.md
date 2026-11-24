@@ -37,6 +37,13 @@ Cada usuário tem seus próprios dados, isolados por RLS no banco.
 2. Cole todo o conteúdo de `supabase/schema.sql`
 3. Clique em **Run** ▶
 
+### 1.2.1 Migrações (bancos já existentes)
+Se você já usava o app, rode também, na ordem, os arquivos de `supabase/migrations/`:
+- `002_investments.sql` — aba de investimentos
+- `003_cards_categories.sql` — **cartões com dia de fechamento/vencimento** e **categorias**
+
+> Sem a migração 003 o app continua funcionando, mas sem cartões e sem salvar categorias.
+
 ### 1.3 Configurar Google OAuth
 1. Acesse [console.cloud.google.com](https://console.cloud.google.com)
 2. Crie um projeto (ou use um existente)
@@ -185,7 +192,14 @@ Cada usuário só consegue ler e escrever seus próprios dados.
 - ✅ **Edição e exclusão** com controle inteligente (fixo = apaga deste mês em diante)
 - ✅ **Busca** dentro das despesas do mês
 - ✅ **Skeleton loading** e animações de número
-- ✅ **Design responsivo** — mobile e desktop
+- ✅ **Edição em grupo**: ao editar uma parcela, escolha *só esta*, *esta e as próximas* ou *todas* (o mesmo vale para contas fixas e para exclusão)
+- ✅ **Cartões com fechamento**: cada compra entra automaticamente no mês da fatura (ex.: Nubank fecha 18 → compra em 05/12 paga em dezembro; Mercado Pago fecha 3 → paga em janeiro)
+- ✅ **Categorização automática** de saídas e entradas por palavras‑chave, aprendendo com as suas escolhas
+- ✅ **Gastos por categoria** e **total por fatura/cartão** no resumo
+- ✅ **Design inspirado no iOS 26 (Liquid Glass)**, com modo escuro automático
+- ✅ **Layout adaptável**: tab bar no celular, barra lateral no tablet/desktop e no celular deitado
+- ✅ **Atalhos no desktop**: ← → trocam o mês, `N` abre nova despesa
+- ✅ Valores aceitam vírgula (`12,50`)
 - ✅ **Dados isolados por usuário** (RLS no Supabase)
 
 ---

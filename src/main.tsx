@@ -8,26 +8,27 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
     <Toaster
-      position="bottom-center"
+      position="top-center"
       gutter={8}
       toastOptions={{
         duration: 3500,
         style: {
-          background: 'var(--bg-raised)',
-          color: 'var(--text-primary)',
-          border: '1px solid var(--border-med)',
+          background: 'var(--glass-strong)',
+          backdropFilter: 'blur(30px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(30px) saturate(180%)',
+          color: 'var(--label)',
+          border: '0.5px solid var(--glass-border)',
           borderRadius: '99px',
-          fontSize: '13px',
+          fontSize: '14px',
           fontWeight: '600',
-          fontFamily: 'Figtree, sans-serif',
           padding: '10px 18px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
         },
         success: {
-          iconTheme: { primary: 'var(--accent-green)', secondary: 'var(--bg-raised)' },
+          iconTheme: { primary: '#1FB86A', secondary: '#fff' },
         },
         error: {
-          iconTheme: { primary: 'var(--accent-red)', secondary: 'var(--bg-raised)' },
+          iconTheme: { primary: '#FF3B30', secondary: '#fff' },
         },
       }}
     />
