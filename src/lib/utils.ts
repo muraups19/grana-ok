@@ -85,3 +85,13 @@ export function fmtPct(value: number): string {
   const sign = value > 0 ? '+' : ''
   return `${sign}${value.toFixed(1).replace('.', ',')}%`
 }
+
+/** Date → YYYY-MM-DD (horário local) */
+export function dateToISO(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/** "05/12" a partir de uma Date */
+export function dayMonth(d: Date): string {
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`
+}

@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS public.transactions (
   month            SMALLINT NOT NULL,             -- 1-12
   year             SMALLINT NOT NULL,             -- ex: 2025
   transaction_date DATE,
+  category         TEXT,                          -- categoria (auto ou manual)
   created_at       TIMESTAMPTZ DEFAULT NOW(),
   updated_at       TIMESTAMPTZ DEFAULT NOW()
 );
@@ -58,12 +59,25 @@ CREATE TABLE IF NOT EXISTS public.investments (
   updated_at       TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Cartões / contas (dia de fechamento e vencimento da fatura)
+CREATE TABLE IF NOT EXISTS public.cards (
+  id          UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id     UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  name        TEXT NOT NULL,
+  closing_day SMALLINT CHECK (closing_day BETWEEN 1 AND 31),
+  due_day     SMALLINT CHECK (due_day BETWEEN 1 AND 31),
+  color       TEXT DEFAULT '#8E8E93',
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ── ROW LEVEL SECURITY ───────────────────────────────────────
 
 ALTER TABLE public.profiles     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.salary_rules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.investments  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.cards        ENABLE ROW LEVEL SECURITY;
 
 -- Profiles: só o próprio usuário
 CREATE POLICY "profiles_self" ON public.profiles
@@ -81,6 +95,10 @@ CREATE POLICY "salary_rules_self" ON public.salary_rules
 CREATE POLICY "investments_self" ON public.investments
   FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
+-- Cards: só o próprio usuário
+CREATE POLICY "cards_self" ON public.cards
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
 -- ── ÍNDICES ──────────────────────────────────────────────────
 
 CREATE INDEX IF NOT EXISTS idx_tx_user_month
@@ -95,6 +113,12 @@ CREATE INDEX IF NOT EXISTS idx_salary_user_date
 
 CREATE INDEX IF NOT EXISTS idx_investments_user
   ON public.investments(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_cards_user
+  ON public.cards(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_tx_user_category
+  ON public.transactions(user_id, category);
 
 -- ── TRIGGER: updated_at automático ──────────────────────────
 
@@ -112,6 +136,10 @@ CREATE TRIGGER trg_transactions_updated
 
 CREATE TRIGGER trg_investments_updated
   BEFORE UPDATE ON public.investments
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER trg_cards_updated
+  BEFORE UPDATE ON public.cards
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- ── TRIGGER: criar perfil no cadastro ───────────────────────

@@ -1,4 +1,5 @@
 import { ReactNode, useEffect } from 'react'
+import { X } from 'lucide-react'
 
 interface ModalProps {
   id: string
@@ -6,10 +7,13 @@ interface ModalProps {
   onClose: () => void
   title: string
   children: ReactNode
+  wide?: boolean
 }
 
-export default function Modal({ id, open, onClose, title, children }: ModalProps) {
-  // Close on Escape
+let openCount = 0
+
+export default function Modal({ id, open, onClose, title, children, wide }: ModalProps) {
+  // Fecha com Esc
   useEffect(() => {
     if (!open) return
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -17,10 +21,15 @@ export default function Modal({ id, open, onClose, title, children }: ModalProps
     return () => window.removeEventListener('keydown', handler)
   }, [open, onClose])
 
-  // Prevent body scroll when open
+  // Trava o scroll do body enquanto houver modal aberto (suporta modais empilhados)
   useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : ''
-    return () => { document.body.style.overflow = '' }
+    if (!open) return
+    openCount++
+    document.body.style.overflow = 'hidden'
+    return () => {
+      openCount = Math.max(0, openCount - 1)
+      if (openCount === 0) document.body.style.overflow = ''
+    }
   }, [open])
 
   if (!open) return null
@@ -28,12 +37,15 @@ export default function Modal({ id, open, onClose, title, children }: ModalProps
   return (
     <div
       id={id}
-      className="modal-overlay open"
+      className="modal-overlay"
       onClick={e => { if ((e.target as HTMLElement).id === id) onClose() }}
     >
-      <div className="modal-sheet" role="dialog" aria-modal aria-label={title}>
+      <div className={`modal-sheet${wide ? ' wide' : ''}`} role="dialog" aria-modal aria-label={title}>
         <div className="modal-handle" />
-        <div className="modal-title">{title}</div>
+        <div className="modal-head">
+          <div className="modal-title">{title}</div>
+          <button className="modal-close" onClick={onClose} aria-label="Fechar"><X size={17} strokeWidth={2.5} /></button>
+        </div>
         {children}
       </div>
     </div>

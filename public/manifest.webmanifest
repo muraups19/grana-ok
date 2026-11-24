@@ -1,0 +1,12 @@
+{
+  "name": "grana.ok — Finanças Pessoais",
+  "short_name": "grana.ok",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#F2F2F7",
+  "theme_color": "#1FB86A",
+  "orientation": "any",
+  "icons": [
+    { "src": "/GranaOk.png", "sizes": "1468x1467", "type": "image/png", "purpose": "any" }
+  ]
+}

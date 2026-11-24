@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Modal from './Modal'
 import type { Investment, InvestmentType, AddInvestmentPayload, EditInvestmentPayload } from '@/types'
 import { INVESTMENT_TYPES } from '@/lib/utils'
+import { parseMoney } from '@/components/ui'
 
 const BROKERS = ['XP Investimentos', 'Nubank', 'Inter', 'Rico', 'Clear', 'BTG Pactual', 'C6 Bank', 'Itaú', 'Binance', 'Mercado Bitcoin']
 
@@ -46,8 +47,8 @@ export default function InvestmentModal({ open, onClose, onSave, onSaveEdit, def
   const handleClose = () => { reset(); onClose() }
 
   const handleSubmit = async () => {
-    const vInvested = parseFloat(invested)
-    const vCurrent = current.trim() === '' ? vInvested : parseFloat(current)
+    const vInvested = parseMoney(invested)
+    const vCurrent = current.trim() === '' ? vInvested : parseMoney(current)
     if (!name.trim() || isNaN(vInvested) || vInvested <= 0 || isNaN(vCurrent) || vCurrent < 0 || !date) return
 
     setSaving(true)
@@ -142,9 +143,8 @@ export default function InvestmentModal({ open, onClose, onSave, onSaveEdit, def
       </div>
 
       <button className="btn btn-success" onClick={handleSubmit} disabled={saving}>
-        {saving ? '⏳ Salvando...' : isEdit ? '✅ Salvar Alterações' : '📈 Salvar Investimento'}
+        {saving ? 'Salvando…' : isEdit ? 'Salvar alterações' : 'Salvar investimento'}
       </button>
-      <button className="btn-cancel" onClick={handleClose}>Cancelar</button>
     </Modal>
   )
 }
